@@ -24,12 +24,12 @@ public class HaS_Camera : MonoBehaviour {
 	public bool fixedCamera = false;
 	public bool restrictFloor = true;
 	public float transitionSpeed = 10;
-	public float rotationSpeed = 50;
-	public float mouseSensitivity = 50;
+	public float rotationSpeed = 100;
+	public float mouseSensitivity = 5;
 	public float zoomSensitivity = 10;
-	public float minZoomDist = 1;
-	public float maxZoomDist = 10;
-	public float currentZoom = 5;
+	public float minZoomDist = 2;
+	public float maxZoomDist = 20;
+	public float currentZoom = 4;
 	public Vector2 angleToTarget;
 	public Vector3 tiltCamera = new Vector3(0,0,0);
 
