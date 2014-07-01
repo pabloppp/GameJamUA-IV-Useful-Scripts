@@ -1,5 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEditor;
+
+/// <summary>
+/// Script para controlar la camara en 3ª persona, configurable
+/// </summary>
+
+/// <description>
+/// You can add it directly to the camera but it's beter that you
+/// create an empty object, we'll call it the 'cameraMan' then assign this script to it
+/// finally make the camera a child of the cameraMan, set up your preferences and enjoy
+/// </description>
 
 public class HaS_Camera : MonoBehaviour {
 
@@ -12,51 +23,175 @@ public class HaS_Camera : MonoBehaviour {
 	public modes mode = modes.follow;
 	public bool fixedCamera = false;
 	public bool restrictFloor = true;
+	public float transitionSpeed = 10;
+	public float rotationSpeed = 50;
 	public float mouseSensitivity = 50;
 	public float zoomSensitivity = 10;
 	public float minZoomDist = 1;
 	public float maxZoomDist = 10;
-	Vector3 desf;
+	public float currentZoom = 5;
+	public Vector2 angleToTarget;
+	public Vector3 tiltCamera = new Vector3(0,0,0);
 
 	// Use this for initialization
 	void Start () {
-		desf = transform.position-target.position;
+
+		initialize();
+		//gameObject.tag = "CameraMan";
+
 	}
 	
+
 	// Update is called once per frame
 	void Update () {
 
-		if(target != null){
-			transform.position = target.position+desf;
+		if(mode == modes.follow && target != null){
+
+			placeCamera(false);
+
+			//transform.position = target.position+desf;
 			if(!fixedCamera){
-				if(Input.GetMouseButton(1) ){
-					if(!restrictFloor || (Input.GetAxis("Mouse Y") < 0 || transform.position.y > target.position.y)){
-						transform.RotateAround(target.position, transform.up, Time.deltaTime*Input.GetAxis("Mouse X")*mouseSensitivity);
-						transform.RotateAround(target.position, -transform.right, Time.deltaTime*Input.GetAxis("Mouse Y")*mouseSensitivity);
-					}
-
-					//transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.z, 0);
-					//transform.LookAt(target.position);
-				}
+	
 				if(Input.GetAxis("Mouse ScrollWheel") != 0){
-
-					if(Vector3.Distance(transform.position, target.position) > minZoomDist && Input.GetAxis("Mouse ScrollWheel") > 0){
-						transform.Translate( transform.forward*Time.deltaTime*zoomSensitivity*Input.GetAxis("Mouse ScrollWheel") );
-					}
-					if(Vector3.Distance(transform.position, target.position) < maxZoomDist && Input.GetAxis("Mouse ScrollWheel") < 0){
-						transform.Translate( transform.forward*Time.deltaTime*zoomSensitivity*Input.GetAxis("Mouse ScrollWheel") );
-					}
+					currentZoom = Mathf.Clamp( currentZoom-Input.GetAxis("Mouse ScrollWheel")*Time.deltaTime*zoomSensitivity, minZoomDist, maxZoomDist);
 				}
+
+				if(Input.GetMouseButton(1) ){
+					if(restrictFloor) angleToTarget.y = Mathf.Clamp(angleToTarget.y+Input.GetAxis("Mouse Y")*Time.deltaTime*mouseSensitivity, -Mathf.PI/2, 0);
+					else angleToTarget.y = Mathf.Clamp(angleToTarget.y+Input.GetAxis("Mouse Y")*Time.deltaTime*mouseSensitivity, -Mathf.PI/2, Mathf.PI/2);
+					angleToTarget.x = angleToTarget.x+Input.GetAxis("Mouse X")*Time.deltaTime*mouseSensitivity; // Mathf.Clamp(*Time.deltaTime*mouseSensitivity, -Mathf.PI/2, Mathf.PI/2);
+				}
+
 			}
 
-			//correcters
-			if(restrictFloor && transform.position.y < target.position.y-0.1){
-				transform.RotateAround(target.position, transform.right, Time.deltaTime*100);
-			}
-			transform.LookAt(target.position);
-			desf = transform.position-target.position;
+
 		}
 
 
+	}
+
+	public void initialize(){
+		if(target != null) angleToTarget = getAnglesXY(transform.position, target.position);
+	}
+	
+	public void placeCamera(bool force){
+		Vector3 whereToGo = new Vector3(0,0,0);
+		
+		//float distance = Vector3.Distance(transform.position, target.position);
+		
+		//Debug.Log("angle: "+Mathf.Rad2Deg*angleToTarget.y);
+		
+		whereToGo.y = -Mathf.Sin(angleToTarget.y)*currentZoom;
+		//Debug.Log(angleToTarget.y);
+		
+		float rectDist = Mathf.Sqrt(Mathf.Pow(currentZoom, 2)-Mathf.Pow(whereToGo.y, 2));
+		
+		whereToGo.y = target.position.y+whereToGo.y;
+		
+		whereToGo.x = target.position.x-Mathf.Sin(angleToTarget.x)*rectDist;
+		
+		whereToGo.z = target.position.z-Mathf.Cos(angleToTarget.x)*rectDist;
+		
+		//Debug.Log("angles: "+angleToTarget.x+" "+angleToTarget.y);
+		//Debug.Log("wheretogo: "+whereToGo.x+" "+whereToGo.y+" "+whereToGo.z);D
+		
+		if(force) transform.position = whereToGo;
+		else transform.position = Vector3.Lerp(transform.position, whereToGo, Time.deltaTime*transitionSpeed);
+		
+		
+		//Mirar hacia el objetivo
+		//transform.LookAt(target.position);
+		Vector3 pos = target.position-transform.position;
+		Quaternion newRot = Quaternion.LookRotation(pos);
+		Quaternion tiltRot = Quaternion.Euler(tiltCamera);
+		newRot *= tiltRot;
+		if(force) transform.rotation = newRot;
+		else transform.rotation = Quaternion.Lerp(transform.rotation, newRot, Time.deltaTime*rotationSpeed);
+		//transform.Rotate(tiltCamera);
+	}
+
+	public Vector2 getAnglesXY(Vector3 a, Vector3 b){
+
+		Vector2 angulos = new Vector2(0,0);
+		float distX = b.x - a.x;
+		float distY = b.y - a.y;
+		float distZ = b.z - a.z;
+
+		float hipote = Mathf.Sqrt(Mathf.Pow(distX, 2)+Mathf.Pow(distZ, 2));
+
+		//float tangente = ditsX/distZ;
+		//angulos.x = Mathf.Atan(hipoH);
+
+		angulos.x = Mathf.Atan2(distX, distZ);
+
+		angulos.y = Mathf.Atan2(distY, hipote);
+
+		return angulos;
+
+	}
+	
+}
+
+[CustomEditor(typeof(HaS_Camera))]
+public class MyScriptEditor : Editor
+{
+
+	int mode;
+
+	public override void OnInspectorGUI()
+	{
+		HaS_Camera context = (HaS_Camera)target;
+		string[] options = {"Follow Target","Cinematic"};
+		GUILayout.Space(10);
+		mode = EditorGUILayout.Popup("> Camera Mode", mode, options);
+		GUILayout.Space(10);
+		if(mode == 0){
+			context.mode = HaS_Camera.modes.follow;
+
+			context.target = EditorGUILayout.ObjectField("Target", context.target, typeof(Transform), true) as Transform;
+			context.transitionSpeed = EditorGUILayout.FloatField("Camera Speed",context.transitionSpeed);
+			context.rotationSpeed = EditorGUILayout.FloatField("Rotation Speed",context.rotationSpeed);
+			if(context.fixedCamera)context.fixedCamera = GUILayout.Toggle(context.fixedCamera, "Fixed Camera", "Button");
+			else context.fixedCamera = GUILayout.Toggle(context.fixedCamera, "Free Camera", "Button");
+			GUILayout.Space(10);
+			GUILayout.Label("- Camera Position:");
+			context.angleToTarget.x = EditorGUILayout.FloatField("Horizontal angle",context.angleToTarget.x);
+			context.angleToTarget.y = EditorGUILayout.FloatField("Vertical angle",context.angleToTarget.y);
+
+			GUILayout.Label(new GUIContent("Camera Tilt:"));
+			GUILayout.BeginHorizontal();
+			GUILayout.Label(new GUIContent("x:"));
+			context.tiltCamera.x = EditorGUILayout.FloatField(context.tiltCamera.x);
+			GUILayout.Label(new GUIContent("y:"));
+			context.tiltCamera.y = EditorGUILayout.FloatField(context.tiltCamera.y);
+			GUILayout.Label(new GUIContent("z:"));
+			context.tiltCamera.z = EditorGUILayout.FloatField(context.tiltCamera.z);
+			EditorGUILayout.EndHorizontal();
+
+			context.currentZoom = EditorGUILayout.Slider("Current Zoom", context.currentZoom, context.minZoomDist, context.maxZoomDist);
+			GUILayout.BeginHorizontal();
+			context.minZoomDist = EditorGUILayout.FloatField(context.minZoomDist);
+			GUILayout.Label(new GUIContent("< zoom <"));
+			context.maxZoomDist = EditorGUILayout.FloatField(context.maxZoomDist);
+			GUILayout.EndHorizontal();
+
+			if(!context.fixedCamera){
+				GUILayout.Space(10);
+				GUILayout.Label("- Free Camera Options:");
+				context.mouseSensitivity = EditorGUILayout.FloatField("Mouse Sensitivity",context.mouseSensitivity);
+				context.zoomSensitivity = EditorGUILayout.FloatField("Zoom Sensitivity",context.zoomSensitivity);
+				context.restrictFloor = GUILayout.Toggle(context.restrictFloor, "Limit angle to floor");
+			}
+
+			GUILayout.Space(30);
+
+			if(GUILayout.Button("Focus Camera")){
+			    context.initialize();
+				context.placeCamera(true);
+			}
+		}
+		else if(mode == 1){
+			context.mode = HaS_Camera.modes.cinematic;
+		}
 	}
 }
