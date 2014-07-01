@@ -1,6 +1,6 @@
 GameJamUA-IV-Useful-Scripts
 ===========================
 
-Useful scripts to use
+Scripts útiles:
 
-WIP
+-Añadida primera versión mejorada del script de movimiento de cámara a la rama principal.
