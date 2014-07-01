@@ -66,6 +66,9 @@ public class HaS_Camera : MonoBehaviour {
 
 
 		}
+		else if(mode == modes.cinematic){
+			//no se que hacer aqui...
+		}
 
 
 	}
@@ -136,16 +139,17 @@ public class HaS_Camera : MonoBehaviour {
 public class MyScriptEditor : Editor
 {
 
-	int mode;
+	HaS_Camera.modes mode;
 
 	public override void OnInspectorGUI()
 	{
 		HaS_Camera context = (HaS_Camera)target;
-		string[] options = {"Follow Target","Cinematic"};
 		GUILayout.Space(10);
-		mode = EditorGUILayout.Popup("> Camera Mode", mode, options);
+		//mode = EditorGUILayout.Popup("> Camera Mode", mode, options);
+		mode = (HaS_Camera.modes)EditorGUILayout.EnumPopup("> Camera Mode", context.mode);
+
 		GUILayout.Space(10);
-		if(mode == 0){
+		if(mode == HaS_Camera.modes.follow){
 			context.mode = HaS_Camera.modes.follow;
 
 			context.target = EditorGUILayout.ObjectField("Target", context.target, typeof(Transform), true) as Transform;
@@ -189,9 +193,20 @@ public class MyScriptEditor : Editor
 			    context.initialize();
 				context.placeCamera(true);
 			}
+
+			if(context.GetComponent("Animation") != null){
+				Animation anim = (Animation)context.GetComponent("Animation");
+				anim.enabled = false;
+			}
 		}
-		else if(mode == 1){
+		else if(mode == HaS_Camera.modes.cinematic){
 			context.mode = HaS_Camera.modes.cinematic;
+
+			if(context.GetComponent("Animation") == null) GUILayout.Label("Add an Animation componen ---");
+			else{
+				Animation anim = (Animation)context.GetComponent("Animation");
+				anim.enabled = true;
+			}
 		}
 	}
 }
