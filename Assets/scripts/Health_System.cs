@@ -23,7 +23,7 @@ public class Health_System : MonoBehaviour {
 	
 	}
 
-	public void recieveDmg(float dmg){
+	public void dealDamage(float dmg){
 		currentHealth -= dmg;
 		if(currentHealth <= 0){
 			currentHealth = 0;
@@ -31,7 +31,7 @@ public class Health_System : MonoBehaviour {
 		}
 	}
 
-	public void recieveHth(float hth){
+	public void heal(float hth){
 		currentHealth += hth;
 		if(currentHealth > maxHealth){
 			currentHealth = maxHealth;
