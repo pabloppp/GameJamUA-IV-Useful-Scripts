@@ -32,6 +32,9 @@ public class HaS_Camera : MonoBehaviour {
 	public float currentZoom = 4;
 	public Vector2 angleToTarget;
 	public Vector3 tiltCamera = new Vector3(0,0,0);
+	public Vector3 targetDisplacement = new Vector3(0,0,0);
+
+	public Transform realCamera;
 
 	// Use this for initialization
 	void Start () {
@@ -43,7 +46,7 @@ public class HaS_Camera : MonoBehaviour {
 	
 
 	// Update is called once per frame
-	void Update () {
+	void LateUpdate () {
 
 		if(mode == modes.follow && target != null){
 
@@ -75,6 +78,10 @@ public class HaS_Camera : MonoBehaviour {
 
 	public void initialize(){
 		if(target != null) angleToTarget = getAnglesXY(transform.position, target.position);
+
+		if(transform.GetChild(0).CompareTag("MainCamera")){
+			realCamera = transform.GetChild(0);
+		}
 	}
 	
 	public void placeCamera(bool force){
@@ -111,6 +118,12 @@ public class HaS_Camera : MonoBehaviour {
 		if(force) transform.rotation = newRot;
 		else transform.rotation = Quaternion.Lerp(transform.rotation, newRot, Time.deltaTime*rotationSpeed);
 		//transform.Rotate(tiltCamera);
+
+		if(realCamera != null){
+			realCamera.position = transform.position+targetDisplacement;
+			Debug.DrawRay(target.position, targetDisplacement);
+			Debug.DrawRay(transform.position, targetDisplacement);
+		}
 	}
 
 	public Vector2 getAnglesXY(Vector3 a, Vector3 b){
@@ -153,6 +166,20 @@ public class MyScriptEditor : Editor
 			context.mode = HaS_Camera.modes.follow;
 
 			context.target = EditorGUILayout.ObjectField("Target", context.target, typeof(Transform), true) as Transform;
+
+			if(context.transform.GetChild(0).CompareTag("MainCamera")){
+				GUILayout.Label(new GUIContent("Target displacement:"));
+				GUILayout.BeginHorizontal();
+				GUILayout.Label(new GUIContent("x:"));
+				context.targetDisplacement.x = EditorGUILayout.FloatField(context.targetDisplacement.x);
+				GUILayout.Label(new GUIContent("y:"));
+				context.targetDisplacement.y = EditorGUILayout.FloatField(context.targetDisplacement.y);
+				GUILayout.Label(new GUIContent("z:"));
+				context.targetDisplacement.z = EditorGUILayout.FloatField(context.targetDisplacement.z);
+				EditorGUILayout.EndHorizontal();
+			}
+
+
 			context.transitionSpeed = EditorGUILayout.FloatField("Camera Speed",context.transitionSpeed);
 			context.rotationSpeed = EditorGUILayout.FloatField("Rotation Speed",context.rotationSpeed);
 			if(context.fixedCamera)context.fixedCamera = GUILayout.Toggle(context.fixedCamera, "Fixed Camera", "Button");
