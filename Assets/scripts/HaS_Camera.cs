@@ -105,7 +105,7 @@ public class HaS_Camera : MonoBehaviour {
 		//Debug.Log("angles: "+angleToTarget.x+" "+angleToTarget.y);
 		//Debug.Log("wheretogo: "+whereToGo.x+" "+whereToGo.y+" "+whereToGo.z);D
 		
-		if(force) transform.position = whereToGo;
+		if(force || transitionSpeed == 0) transform.position = whereToGo;
 		else transform.position = Vector3.Lerp(transform.position, whereToGo, Time.deltaTime*transitionSpeed);
 		
 		
@@ -115,7 +115,7 @@ public class HaS_Camera : MonoBehaviour {
 		Quaternion newRot = Quaternion.LookRotation(pos);
 		Quaternion tiltRot = Quaternion.Euler(tiltCamera);
 		newRot *= tiltRot;
-		if(force) transform.rotation = newRot;
+		if(force || rotationSpeed == 0) transform.rotation = newRot;
 		else transform.rotation = Quaternion.Lerp(transform.rotation, newRot, Time.deltaTime*rotationSpeed);
 		//transform.Rotate(tiltCamera);
 
