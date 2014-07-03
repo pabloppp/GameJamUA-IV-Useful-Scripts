@@ -13,6 +13,7 @@ public class player_movement : MonoBehaviour {
 		IDLE,
 		RUNNING,   //trigger: run
 		JUMPING,
+		FALLING,
 		ATTACKING,
 		FREEZED,
 		DEAD
@@ -33,9 +34,27 @@ public class player_movement : MonoBehaviour {
 	public KeyCode backwardKey = KeyCode.S;
 	public KeyCode leftKey = KeyCode.A;
 	public KeyCode rightKey = KeyCode.D;
+
+	public KeyCode jumpKey = KeyCode.Space;
+	public KeyCode attackKey = KeyCode.Mouse0;
+
+	public bool lookAtTarget = true;
+	public Transform lookTarget;
+
+	public bool detectFloor = true;
+	public bool anyFloor = true;
+	public string[] floorTags;
+
+	public bool antigravityJumps = true;
+	public float jumpForce = 100;
+	public float jumptime = 2;
+	float currentJumpTime = 0;
+	bool jumped = false;
+
 	Vector3 localForward, localRight, localUp;
 	float currentRot = 0;
 	Animator myAnimator;
+	
 
 
 	// Use this for initialization
@@ -50,6 +69,7 @@ public class player_movement : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
+
 		//transform.Translate(transform.forward*Time.deltaTime*10);
 
 		if(useMainCamera && camera != Camera.main ) camera = Camera.main;
@@ -58,15 +78,49 @@ public class player_movement : MonoBehaviour {
 
 		if(state == playerStates.IDLE){
 
-			if(Input.GetKeyDown(forwardKey) || Input.GetKeyDown(backwardKey) || Input.GetKeyDown(rightKey) || Input.GetKeyDown(leftKey)){
+			if(movementKeyDown()){
 				myAnimator.SetBool("idle", false);
 				myAnimator.SetTrigger("run");
 				state = playerStates.RUNNING;
+			}
+
+			if(Input.GetKeyDown(jumpKey)){
+				state = playerStates.JUMPING;
+				myAnimator.SetTrigger("jump");
+				currentJumpTime = Time.time;
+			}
+
+		}
+
+		if(state == playerStates.FALLING){
+			if(myAnimator.GetBool("floor")){
+				state = playerStates.IDLE;
+				myAnimator.SetTrigger("idle");
+				if(antigravityJumps){
+					Rigidbody rb = GetComponent<Rigidbody>();
+					if(rb != null) rb.useGravity = true;
+				}
+			}
+		}
+
+		if(state == playerStates.JUMPING){
+
+			if(!antigravityJumps && GetComponent<Rigidbody>() != null) GetComponent<Rigidbody>().AddForce(transform.up*jumpForce);
+
+			if((Time.time-currentJumpTime) >= jumptime){
+				state = playerStates.FALLING;
+				myAnimator.SetTrigger("fall");
 			}
 		}
 
 		if(state == playerStates.RUNNING){
 
+
+			if(Input.GetKeyDown(jumpKey)){
+				state = playerStates.JUMPING;
+				myAnimator.SetTrigger("jump");
+				currentJumpTime = Time.time;
+			}
 
 			//MECANIM CALLS
 			if(Input.GetKeyDown(rightKey)){
@@ -95,7 +149,7 @@ public class player_movement : MonoBehaviour {
 			else myAnimator.SetBool("forward", false);
 			//---
 
-			if(!Input.anyKey){
+			if(!movementKey()){
 				if(!forceTranslation || translationSpeed == 0){
 					myAnimator.SetTrigger("idle");
 					state = playerStates.IDLE;
@@ -105,7 +159,7 @@ public class player_movement : MonoBehaviour {
 			if(forceTranslation){
 				if(forceRotation){
 
-					if(Input.anyKey){
+					if(movementKey()){
 						if(translationSpeed < translationMaxSpeed) translationSpeed+=Time.deltaTime*translationAccel;
 						if(translationSpeed >= translationMaxSpeed || translationAccel == 0) translationSpeed = translationMaxSpeed;
 					}
@@ -118,7 +172,7 @@ public class player_movement : MonoBehaviour {
 				}
 				else{
 
-					if(Input.anyKey){
+					if(movementKey()){
 						translationSpeed = translationMaxSpeed;
 					}
 					else{
@@ -203,12 +257,14 @@ public class player_movement : MonoBehaviour {
 
 		}
 
+		myAnimator.SetBool("floor", false);
+
 	}
 
 	void OnCollisionEnter (Collision col)
 	{
 		myAnimator.SetTrigger("collide");
-		foreach(ContactPoint contact in col.contacts){;
+		foreach(ContactPoint contact in col.contacts){
 			if(Vector3.Angle(contact.normal, transform.forward) > 135){
 				myAnimator.SetTrigger("collide_front");
 			}
@@ -217,9 +273,53 @@ public class player_movement : MonoBehaviour {
 
 	void OnCollisionStay(Collision col){
 		myAnimator.SetBool("collide", true);
+
+		foreach(ContactPoint contact in col.contacts){
+			if(detectFloor){
+				if(anyFloor || hasFloorTags(col.transform)){
+					if(Vector3.Angle(contact.normal, transform.up) < 5){
+						Debug.Log("On Floor");
+						myAnimator.SetBool("floor", true);
+					}
+					//else myAnimator.SetBool("floor", false);
+				}
+			}
+		}
 	}
 
 	void OnCollisionExit(Collision col){
 		myAnimator.SetBool("collide", false);
+		if(state == playerStates.JUMPING && antigravityJumps){
+			Rigidbody rb = GetComponent<Rigidbody>();
+			if(rb != null) rb.useGravity = false;
+			jumped = true; 
+		}
+	}
+	
+	bool hasFloorTags(Transform tr){
+
+		foreach(string s in floorTags) if(tr.CompareTag(s)) return true;
+		return false;
+	}
+
+	void OnAnimatorIK(int layerIndex){
+		if(lookTarget != null){
+			if(lookAtTarget){
+
+				myAnimator.SetLookAtPosition(lookTarget.position);
+				myAnimator.SetLookAtWeight(1);
+			}
+			else myAnimator.SetLookAtWeight(0);
+		}
+	}
+
+	public bool movementKey(){
+		if(Input.GetKey(forwardKey) || Input.GetKey(backwardKey) || Input.GetKey(rightKey) || Input.GetKey(leftKey)) return true;
+		else return false;
+	}
+
+	public bool movementKeyDown(){
+		if(Input.GetKeyDown(forwardKey) || Input.GetKeyDown(backwardKey) || Input.GetKeyDown(rightKey) || Input.GetKeyDown(leftKey)) return true;
+		else return false;
 	}
 }
