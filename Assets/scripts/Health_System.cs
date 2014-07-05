@@ -8,10 +8,11 @@ public class Health_System : MonoBehaviour {
 
 	public float maxHealth = 100;
 	private float currentHealth;
+	public float totalArmor = 0;
 	public float[] armor;
 	//0 indica la armadura como una suma a la vida, 1 indica la armadura como un porcentaje sobre la vida
-	public int addedArmor = 0;
-	private float totalArmor = 0;
+	public int armorType = 0;
+	private float newArmor = 0;
 
 
 	// Use this for initialization
@@ -20,23 +21,30 @@ public class Health_System : MonoBehaviour {
 		foreach(float f in armor){
 			totalArmor += f;
 		}
-		if(addedArmor == 0){
-			currentHealth += totalArmor;
-		}
-		else if(addedArmor == 1){
-			currentHealth += (totalArmor*currentHealth)/100;
-		}
 	}
 	
 	// Update is called once per frame
 	void Update () {
-
+		newArmor = 0;
+		foreach(float f in armor){
+			newArmor += f;
+			if(totalArmor != newArmor) totalArmor = newArmor;
+		}
 		print (currentHealth);
 	}
 
 	public void dealDamage(float dmg){
-		print ("Armadura: "+totalArmor);
-		currentHealth -= dmg;
+		float newDmg = 0;
+		if(armorType == 0){
+			if(totalArmor <= dmg) newDmg = dmg-totalArmor;
+			else newDmg = 0;
+		}
+		else if(armorType == 1){ //Los objetos se suman hasta alcanzar el 100%...
+			if(totalArmor <= 100) newDmg = dmg-((totalArmor*dmg)/100);
+			else newDmg = 0;
+		}
+		print("armadura: "+newDmg);
+		currentHealth -= newDmg;
 
 		if(currentHealth <= 0){
 			currentHealth = 0;
